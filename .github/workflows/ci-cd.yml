@@ -62,6 +62,8 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
         run: npm run build
 
       - name: Log in to GitHub Container Registry
@@ -79,3 +81,5 @@ jobs:
           context: ./frontend
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/shopease-frontend:latest
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
