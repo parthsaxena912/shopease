@@ -10,6 +10,7 @@ RUN npm install
 
 COPY . .
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+RUN echo "DEBUG Client ID length: ${#VITE_GOOGLE_CLIENT_ID}"
 RUN npm run build
 
 # Stage 2: Serve with Nginx
