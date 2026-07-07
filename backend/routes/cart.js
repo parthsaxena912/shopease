@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
-const requireAuth = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 
-// All cart routes require login
 router.use(requireAuth);
 
-// GET current user's cart
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
@@ -24,7 +22,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ADD item to cart (or increase quantity if already present)
 router.post('/', async (req, res) => {
   const { productId, quantity } = req.body;
   if (!productId) {
@@ -48,7 +45,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// UPDATE quantity of a cart item
 router.put('/:itemId', async (req, res) => {
   const { quantity } = req.body;
   if (!quantity || quantity < 1) {
@@ -57,9 +53,7 @@ router.put('/:itemId', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `UPDATE cart_items SET quantity = $1
-       WHERE id = $2 AND user_id = $3
-       RETURNING *`,
+      `UPDATE cart_items SET quantity = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
       [quantity, req.params.itemId, req.userId]
     );
     if (result.rows.length === 0) {
@@ -72,7 +66,6 @@ router.put('/:itemId', async (req, res) => {
   }
 });
 
-// REMOVE item from cart
 router.delete('/:itemId', async (req, res) => {
   try {
     const result = await pool.query(

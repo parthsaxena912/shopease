@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const pool = require('../db/pool');
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
@@ -10,10 +11,23 @@ function requireAuth(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.userId;
+
+    const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId]);
+    req.userRole = result.rows[0]?.role || 'customer';
+
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-module.exports = requireAuth;
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.userRole)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRole };
