@@ -9,6 +9,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
+import SellerDashboard from './pages/SellerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/seller" element={<SellerDashboard />} />
+                <Route path="/admin" element={<AdminDashboard />} />
               </Routes>
             </main>
             <Footer />

@@ -16,8 +16,15 @@ export function AuthProvider({ children }) {
     setUser(res.data.user);
   };
 
-  const signup = async (name, email, password) => {
-    const res = await client.post('/auth/signup', { name, email, password });
+  const signup = async (name, email, password, role) => {
+    const res = await client.post('/auth/signup', { name, email, password, role });
+    localStorage.setItem('token', res.data.token);
+    localStorage.setItem('user', JSON.stringify(res.data.user));
+    setUser(res.data.user);
+  };
+
+  const loginWithGoogle = async (credential) => {
+    const res = await client.post('/auth/google', { credential });
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     setUser(res.data.user);
@@ -30,7 +37,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, login, signup, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
