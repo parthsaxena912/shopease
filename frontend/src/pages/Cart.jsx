@@ -5,23 +5,88 @@ import client from '../api/client';
 import { useCart } from '../context/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (document.getElementById('razorpay-checkout-js')) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'razorpay-checkout-js';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 export default function Cart() {
   const { items, refreshCart, removeFromCart, updateQuantity } = useCart();
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     refreshCart().then(() => setLoading(false));
+    loadRazorpayScript();
   }, []);
 
   const checkout = async () => {
+    setPaying(true);
     try {
-      await client.post('/orders/checkout');
-      toast.success('Order placed successfully!');
-      await refreshCart();
-      navigate('/orders');
-    } catch {
-      toast.error('Checkout failed');
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error('Could not load payment gateway. Check your connection.');
+        setPaying(false);
+        return;
+      }
+
+      const { data } = await client.post('/payments/create-order');
+      const { orderId, amount, currency, keyId } = data;
+
+      const options = {
+        key: keyId,
+        amount,
+        currency,
+        name: 'ShopEase',
+        description: 'Order payment',
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            await client.post('/payments/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            toast.success('Payment successful! Order placed.');
+            await refreshCart();
+            navigate('/orders');
+          } catch (err) {
+            console.error(err);
+            toast.error('Payment verification failed. Contact support if you were charged.');
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaying(false);
+            toast('Payment cancelled');
+          },
+        },
+        theme: { color: '#4f46e5' },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (response) => {
+        console.error(response.error);
+        toast.error('Payment failed. Please try again.');
+        setPaying(false);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not start checkout. Please try again.');
+      setPaying(false);
     }
   };
 
@@ -100,9 +165,10 @@ export default function Cart() {
         </div>
         <button
           onClick={checkout}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"
+          disabled={paying}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Checkout <ArrowRight size={18} />
+          {paying ? 'Processing...' : <>Pay <ArrowRight size={18} /></>}
         </button>
       </div>
     </div>
